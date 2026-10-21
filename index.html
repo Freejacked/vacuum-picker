@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Vacuum Should You Buy? — Free Picker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: #0f1115; color: #e8eaf0; min-height: 100vh; display: flex;
+         justify-content: center; padding: 24px 16px; }
+  .card { width: 100%; max-width: 560px; background: #171a21; border: 1px solid #2a2e3a;
+          border-radius: 14px; padding: 28px 24px; margin: auto 0; }
+  h1 { font-size: 1.5rem; margin-bottom: 8px; }
+  .sub { color: #9aa0b2; font-size: .95rem; margin-bottom: 20px; line-height: 1.5; }
+  .progress { height: 6px; background: #262b38; border-radius: 3px; margin-bottom: 22px; overflow: hidden; }
+  .progress > div { height: 100%; background: #4f8cff; border-radius: 3px; transition: width .3s; }
+  .q { font-size: 1.15rem; font-weight: 600; margin-bottom: 14px; }
+  .opt { display: block; width: 100%; text-align: left; background: #1f2330; color: #e8eaf0;
+         border: 1px solid #343a4d; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+         font-size: 1rem; cursor: pointer; transition: border-color .15s, background .15s; }
+  .opt:hover { border-color: #4f8cff; background: #232938; }
+  .back { background: none; border: none; color: #7d8496; font-size: .85rem; cursor: pointer; margin-top: 6px; }
+  .pick { font-size: 1.35rem; font-weight: 700; color: #4f8cff; margin: 6px 0 4px; }
+  .price { font-size: 1.05rem; color: #c9cfdd; margin-bottom: 14px; }
+  .why { line-height: 1.6; color: #d6dae6; margin-bottom: 14px; }
+  .caveat { background: #221a12; border: 1px solid #5a4020; border-radius: 10px; padding: 12px 14px;
+            font-size: .92rem; line-height: 1.55; color: #e8d9bd; margin-bottom: 18px; }
+  .cta { display: block; text-align: center; background: #4f8cff; color: #fff; text-decoration: none;
+         font-weight: 700; border-radius: 10px; padding: 14px; margin-bottom: 10px; font-size: 1.05rem; }
+  .cta.alt { background: #232a3a; border: 1px solid #4f8cff; color: #bcd2ff; }
+  .ftc { margin-top: 18px; font-size: .78rem; color: #6b7183; line-height: 1.5; }
+  .restart { display: block; margin: 14px auto 0; background: none; border: none; color: #7d8496;
+             cursor: pointer; font-size: .9rem; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="card" id="app"></div>
+<script>
+// ============================================================
+// VACUUM PICKER QUIZ
+// John's Amazon Associates short links are wired in (2026-10-20):
+// Bissell / Shark / Dyson picks below each carry his real link.
+// ============================================================
+
+var PICKS = {
+  bissell: {
+    name: "Bissell PowerClean FurFinder",
+    price: "around $150–$200 (lists at $259.99, on sale constantly)",
+    why: "This is the smart money, and it is the pet brand. The FurFinder tool pulls embedded hair out of upholstery and stairs, it stands up on its own, and it does the core job — pick up the dirt — for a fraction of the big-brand money. For an apartment or a small house, this wins on value. Spend the rest on literally anything else.",
+    caveat: "Do not buy this if you have a husky-level shedder and wall-to-wall carpet — the Shark's self-cleaning brush roll handles that better. And do not buy it if allergies run your household; its filtration is not in the Dyson's league.",
+    link: "https://link.amazon/B0gxmuiln", // John's Associates link (Bissell PowerClean FurFinder 4052)
+    fallback: null
+  },
+  shark: {
+    name: "Shark PowerDetect",
+    price: "around $330 (lists at $449.99, on sale often)",
+    why: "This is the pet owner's machine. The brush roll is self-cleaning, so hair does not wrap — no scissors. It senses dirt, floor type, and edges and adjusts itself, cleans on the pull-back as well as the push, and the wand bends to reach under furniture. It is the same flagship cleaning as Shark's $549 auto-empty model — you just empty the bin yourself and keep the difference. And Shark's five-year warranty versus Dyson's two says who expects it to survive the dog.",
+    caveat: "Do not buy this if money is tight — the Bissell does the core job for about half the price. And know the headline 70-minute runtime is eco mode; on max you get about 12 minutes — the same trick every brand plays.",
+    link: "https://link.amazon/B06387lQs", // John's Associates link (Shark PowerDetect IP1251)
+    fallback: "bissell"
+  },
+  dyson: {
+    name: "Dyson V15 Detect",
+    price: "around $590–$650 (lists over $800 — discounts hard, do not pay list)",
+    why: "Strongest suction of the three, a fully sealed HEPA filtration system, and the dust readout that shows you what you are actually picking up. If allergies run your household, or you want to buy once and never think about vacuums again, this is it.",
+    caveat: "Do not buy this for a studio apartment with no pets and no allergies. That would be paying for engineering you will never use. Buy it when the house or the sinuses demand it.",
+    link: "https://link.amazon/B06y0F4ls", // John's Associates link (Dyson V15 Detect Origin)
+    fallback: "shark"
+  }
+};
+
+// Honest-pick logic: heavy shedder -> Shark (anti-hair-wrap); allergies -> Dyson
+// (sealed HEPA); tight budget / small place / no shedding -> Bissell.
+// Budget caps keep it honest: under $250 can never recommend a Shark or Dyson.
+var QUESTIONS = [
+  { q: "Any pets that shed?",
+    opts: [
+      { t: "No pets",                        s: { bissell: 1, shark: 0, dyson: 1 } },
+      { t: "One pet, light shedding",        s: { bissell: 0, shark: 1, dyson: 1 } },
+      { t: "Heavy shedder — husky-level",    s: { bissell: 0, shark: 3, dyson: 0 } }
+    ] },
+  { q: "What are your floors?",
+    opts: [
+      { t: "Mostly carpet",     s: { bissell: 0, shark: 1, dyson: 1 } },
+      { t: "Mostly hard floor", s: { bissell: 2, shark: 0, dyson: 1 } },
+      { t: "A mix of both",     s: { bissell: 1, shark: 1, dyson: 1 } }
+    ] },
+  { q: "How big is the place?",
+    opts: [
+      { t: "Apartment",   s: { bissell: 2, shark: 0, dyson: 0 } },
+      { t: "Small house", s: { bissell: 1, shark: 1, dyson: 0 } },
+      { t: "Big house",   s: { bissell: 0, shark: 1, dyson: 2 } }
+    ] },
+  { q: "Do allergies run the household?",
+    opts: [
+      { t: "Yes — the air matters", s: { bissell: 0, shark: 0, dyson: 3 } },
+      { t: "No",                    s: { bissell: 1, shark: 1, dyson: 0 } }
+    ] },
+  { q: "What is the budget?",
+    opts: [
+      { t: "Under $250", s: { bissell: 3, shark: 0, dyson: 0 }, cap: "bissell" },
+      { t: "$250–$500",  s: { bissell: 0, shark: 2, dyson: 0 }, cap: null },
+      { t: "$500+",      s: { bissell: 0, shark: 1, dyson: 2 }, cap: null }
+    ] }
+];
+
+var app = document.getElementById("app");
+var step = 0, answers = [], cap = null;
+
+function render() {
+  if (step === 0 && answers.length === 0) {
+    app.innerHTML =
+      "<h1>Which vacuum should you buy?</h1>" +
+      "<p class='sub'>Answer 5 quick questions — pets, floors, house size — and get one clear pick, " +
+      "not a list of twenty. Your floors and your pets decide more than the brand does.</p>" +
+      "<button class='cta' onclick='next()'>Start the quiz</button>";
+    return;
+  }
+  if (step >= QUESTIONS.length) { renderResult(); return; }
+  var q = QUESTIONS[step];
+  var html = "<div class='progress'><div style='width:" + (step / QUESTIONS.length * 100) + "%'></div></div>" +
+             "<p class='q'>" + (step + 1) + ". " + q.q + "</p>";
+  q.opts.forEach(function (o, i) {
+    html += "<button class='opt' onclick='answer(" + i + ")'>" + o.t + "</button>";
+  });
+  if (step > 0) html += "<button class='back' onclick='back()'>&larr; back</button>";
+  app.innerHTML = html;
+}
+
+function answer(i) {
+  var o = QUESTIONS[step].opts[i];
+  answers[step] = o;
+  if (o.cap) cap = o.cap;
+  step++;
+  render();
+}
+function back() { step--; render(); }
+function next() { step = 0; render(); }
+
+function renderResult() {
+  var scores = { bissell: 0, shark: 0, dyson: 0 };
+  answers.forEach(function (o) {
+    for (var k in o.s) scores[k] += o.s[k];
+  });
+  var order = ["bissell", "shark", "dyson"]; // tie-break toward the cheaper honest pick
+  var best = order[0];
+  order.forEach(function (k) { if (scores[k] > scores[best]) best = k; });
+  if (cap === "bissell") best = "bissell"; // under $250: never recommend above budget
+  var p = PICKS[best];
+  var html =
+    "<div class='progress'><div style='width:100%'></div></div>" +
+    "<p class='sub'>Your pick:</p>" +
+    "<p class='pick'>" + p.name + "</p>" +
+    "<p class='price'>" + p.price + "</p>" +
+    "<p class='why'>" + p.why + "</p>" +
+    "<div class='caveat'><strong>Honest caveat:</strong> " + p.caveat + "</div>" +
+    "<a class='cta' href='" + p.link + "' target='_blank' rel='nofollow sponsored noopener'>Check the price</a>";
+  if (p.fallback) {
+    var fb = PICKS[p.fallback];
+    html += "<a class='cta alt' href='" + fb.link + "' target='_blank' rel='nofollow sponsored noopener'>Cheaper fallback: " +
+            fb.name + " (" + fb.price + ")</a>";
+  }
+  html += "<p class='ftc'>Disclosure: the links above may be affiliate links. If you buy through one, " +
+          "the creator may earn a commission at no extra cost to you.</p>" +
+          "<button class='restart' onclick='step=0;answers=[];cap=null;render()'>Retake the quiz</button>";
+  app.innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
